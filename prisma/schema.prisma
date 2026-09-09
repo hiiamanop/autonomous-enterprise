@@ -1,0 +1,973 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =============================================================================
+// Sales Domain Models
+// =============================================================================
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  salesOrders SalesOrder[]
+
+  @@index([email])
+  @@map("customers")
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+  FULFILLED
+}
+
+model SalesOrder {
+  id             String           @id @default(uuid())
+  customerId     String           @map("customer_id")
+  orderNumber    String           @map("order_number")
+  subtotal       Float            @default(0.0)
+  discountAmount Float            @default(0.0) @map("discount_amount")
+  totalAmount    Float            @default(0.0) @map("total_amount")
+  status         SalesOrderStatus @default(DRAFT)
+  idempotencyKey String?          @map("idempotency_key")
+  notes          String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  customer Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items    SalesOrderItem[]
+
+  @@index([idempotencyKey])
+  @@index([customerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String   @id @default(uuid())
+  salesOrderId String   @map("sales_order_id")
+  productId    String   @map("product_id")
+  quantity     Int
+  unitPrice    Float    @map("unit_price")
+  discount     Float    @default(0.0)
+  totalPrice   Float    @map("total_price")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
+// =============================================================================
+// Inventory Domain Models
+// =============================================================================
+
+model Product {
+  id        String   @id @default(uuid())
+  sku       String   @unique
+  name      String
+  price     Float
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stocks           Stock[]
+  stockMovements   StockMovement[]
+  reorderRules     ReorderRule[]
+  purchaseRequests PurchaseRequest[]
+
+  @@map("products")
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  location  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stocks         Stock[]
+  stockMovements StockMovement[]
+
+  @@map("warehouses")
+}
+
+model Stock {
+  id          String   @id @default(uuid())
+  warehouseId String   @map("warehouse_id")
+  productId   String   @map("product_id")
+  quantity    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, productId])
+  @@map("stocks")
+}
+
+enum StockMovementType {
+  INBOUND
+  OUTBOUND
+  ADJUSTMENT
+  TRANSFER
+}
+
+model StockMovement {
+  id          String            @id @default(uuid())
+  warehouseId String            @map("warehouse_id")
+  productId   String            @map("product_id")
+  quantity    Int
+  type        StockMovementType
+  reference   String
+  reason      String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([warehouseId, productId])
+  @@map("stock_movements")
+}
+
+enum StockReservationStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+  CANCELLED
+}
+
+model StockReservation {
+  id             String                 @id @default(uuid())
+  warehouseId    String                 @map("warehouse_id")
+  productId      String                 @map("product_id")
+  quantity       Int
+  status         StockReservationStatus @default(PENDING)
+  idempotencyKey String?                @map("idempotency_key")
+  expiresAt      DateTime?              @map("expires_at")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+
+  @@index([idempotencyKey])
+  @@index([warehouseId, productId])
+  @@map("stock_reservations")
+}
+
+model ReorderRule {
+  id              String   @id @default(uuid())
+  warehouseId     String   @map("warehouse_id")
+  productId       String   @map("product_id")
+  minQuantity     Int      @map("min_quantity")
+  reorderQuantity Int      @map("reorder_quantity")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([warehouseId, productId])
+  @@map("reorder_rules")
+}
+
+// =============================================================================
+// Procurement Domain Models
+// =============================================================================
+
+model Supplier {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  isVerified   Boolean  @default(false) @map("is_verified")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  purchaseOrders     PurchaseOrder[]
+  supplierQuotations SupplierQuotation[]
+
+  @@map("suppliers")
+}
+
+enum PurchaseRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+model PurchaseRequest {
+  id          String                @id @default(uuid())
+  requestedBy String                @map("requested_by")
+  productId   String                @map("product_id")
+  quantity    Int
+  status      PurchaseRequestStatus @default(PENDING)
+  reason      String?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("purchase_requests")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id             String              @id @default(uuid())
+  supplierId     String              @map("supplier_id")
+  orderNumber    String              @map("order_number")
+  totalAmount    Float               @default(0.0) @map("total_amount")
+  status         PurchaseOrderStatus @default(DRAFT)
+  idempotencyKey String?             @map("idempotency_key")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  supplier      Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items         PurchaseOrderItem[]
+  goodsReceipts GoodsReceipt[]
+
+  @@index([supplierId])
+  @@index([idempotencyKey])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(uuid())
+  purchaseOrderId String   @map("purchase_order_id")
+  productId       String   @map("product_id")
+  quantity        Int
+  unitPrice       Float    @map("unit_price")
+  totalPrice      Float    @map("total_price")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model SupplierQuotation {
+  id         String    @id @default(uuid())
+  supplierId String    @map("supplier_id")
+  productId  String    @map("product_id")
+  unitPrice  Float     @map("unit_price")
+  validUntil DateTime? @map("valid_until")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([productId])
+  @@map("supplier_quotations")
+}
+
+model GoodsReceipt {
+  id               String   @id @default(uuid())
+  purchaseOrderId  String   @map("purchase_order_id")
+  receivedQuantity Int      @map("received_quantity")
+  warehouseId      String   @map("warehouse_id")
+  receivedAt       DateTime @default(now()) @map("received_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@map("goods_receipts")
+}
+
+// =============================================================================
+// Finance Domain Models
+// =============================================================================
+
+model CostCenter {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  budgets Budget[]
+
+  @@map("cost_centers")
+}
+
+model Budget {
+  id           String   @id @default(uuid())
+  costCenterId String   @map("cost_center_id")
+  year         Int
+  amount       Float
+  spentAmount  Float    @default(0.0) @map("spent_amount")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  costCenter        CostCenter         @relation(fields: [costCenterId], references: [id], onDelete: Cascade)
+  budgetAllocations BudgetAllocation[]
+  expenses          Expense[]
+
+  @@unique([costCenterId, year])
+  @@map("budgets")
+}
+
+model BudgetAllocation {
+  id          String   @id @default(uuid())
+  budgetId    String   @map("budget_id")
+  category    String
+  amount      Float
+  spentAmount Float    @default(0.0) @map("spent_amount")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  budget   Budget    @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@index([budgetId])
+  @@map("budget_allocations")
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+model Expense {
+  id           String        @id @default(uuid())
+  budgetId     String?       @map("budget_id")
+  allocationId String?       @map("allocation_id")
+  amount       Float
+  category     String
+  status       ExpenseStatus @default(PENDING)
+  notes        String?
+  paidAt       DateTime?     @map("paid_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  budget     Budget?           @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+  allocation BudgetAllocation? @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+
+  @@index([budgetId])
+  @@index([allocationId])
+  @@map("expenses")
+}
+
+// =============================================================================
+// Accounting Domain Models
+// =============================================================================
+
+enum ChartOfAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+model ChartOfAccount {
+  id        String             @id @default(uuid())
+  code      String             @unique
+  name      String
+  type      ChartOfAccountType
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  journalEntries JournalEntry[]
+
+  @@map("chart_of_accounts")
+}
+
+enum JournalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  POSTED
+  REJECTED
+  REVERSED
+}
+
+model Journal {
+  id          String        @id @default(uuid())
+  reference   String        @unique
+  description String?
+  status      JournalStatus @default(DRAFT)
+  postedAt    DateTime?     @map("posted_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  entries JournalEntry[]
+
+  @@map("journals")
+}
+
+enum JournalEntryDirection {
+  DEBIT
+  CREDIT
+}
+
+model JournalEntry {
+  id        String                @id @default(uuid())
+  journalId String                @map("journal_id")
+  accountId String                @map("account_id")
+  direction JournalEntryDirection
+  amount    Float
+  memo      String?
+  createdAt DateTime              @default(now()) @map("created_at")
+
+  journal Journal        @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([journalId])
+  @@index([accountId])
+  @@map("journal_entries")
+}
+
+enum InvoiceType {
+  RECEIVABLE
+  PAYABLE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+  OVERDUE
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique @map("invoice_number")
+  type          InvoiceType
+  status        InvoiceStatus @default(DRAFT)
+  amount        Float
+  dueDate       DateTime      @map("due_date")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  CASH
+  CHECK
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  invoiceId String        @map("invoice_id")
+  amount    Float
+  method    PaymentMethod
+  paidAt    DateTime      @default(now()) @map("paid_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// =============================================================================
+// Orchestration & Workflow Domain Models
+// =============================================================================
+
+enum WorkflowTaskStatus {
+  PENDING
+  CLAIMED
+  IN_PROGRESS
+  WAITING_FOR_INPUT
+  COMPLETED
+  FAILED
+  TIMED_OUT
+  CANCELLED
+}
+
+model WorkflowTask {
+  id             String             @id @default(uuid())
+  workflowId     String             @map("workflow_id")
+  taskType       String             @map("task_type")
+  status         WorkflowTaskStatus @default(PENDING)
+  payload        Json
+  result         Json?
+  error          String?
+  claimedBy      String?            @map("claimed_by")
+  claimedAt      DateTime?          @map("claimed_at")
+  heartbeatAt    DateTime?          @map("heartbeat_at")
+  retries        Int                @default(0)
+  maxRetries     Int                @default(3) @map("max_retries")
+  idempotencyKey String?            @map("idempotency_key")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  @@index([workflowId])
+  @@index([status])
+  @@index([idempotencyKey])
+  @@map("workflow_tasks")
+}
+
+enum ConflictStatus {
+  DETECTED
+  RESOLVED
+  ESCALATED
+}
+
+model ConflictLog {
+  id             String         @id @default(uuid())
+  workflowId     String?        @map("workflow_id")
+  partyA         String         @map("party_a")
+  partyADecision String         @map("party_a_decision")
+  partyB         String         @map("party_b")
+  partyBDecision String         @map("party_b_decision")
+  status         ConflictStatus @default(DETECTED)
+  resolution     String?
+  createdAt      DateTime       @default(now()) @map("created_at")
+  resolvedAt     DateTime?      @map("resolved_at")
+
+  @@index([status])
+  @@map("conflict_logs")
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  TRIAGED
+  ASSIGNED
+  IN_PROGRESS
+  ESCALATED
+  HUMAN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  workflowId  String?        @map("workflow_id")
+  title       String
+  description String?
+  source      String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  assignedTo  String?        @map("assigned_to")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  comments    TicketComment[]
+  assignments TicketAssignment[]
+  sla         TicketSla?
+
+  @@index([status])
+  @@map("tickets")
+}
+
+// =============================================================================
+// AI Agent Registry & FinOps Models
+// =============================================================================
+
+enum AgentAvailability {
+  AVAILABLE
+  DEGRADED
+  UNAVAILABLE
+}
+
+model AgentRegistration {
+  id           String            @id @default(uuid())
+  agentName    String            @unique @map("agent_name")
+  version      String
+  model        String
+  capabilities String[]
+  availability AgentAvailability @default(AVAILABLE)
+  costPerCall  Float             @default(0.0) @map("cost_per_call")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  trustProfile TrustProfile?
+
+  @@map("agent_registrations")
+}
+
+model TrustProfile {
+  id                    String   @id @default(uuid())
+  agentRegistrationId   String   @unique @map("agent_registration_id")
+  accuracy              Float    @default(1.0)
+  consistency           Float    @default(1.0)
+  calibration           Float    @default(1.0)
+  historicalSuccessRate Float    @default(1.0) @map("historical_success_rate")
+  failureRate           Float    @default(0.0) @map("failure_rate")
+  policyViolations      Int      @default(0) @map("policy_violations")
+  overallTrust          Float    @default(1.0) @map("overall_trust")
+  sampleCount           Int      @default(0) @map("sample_count")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  agentRegistration AgentRegistration @relation(fields: [agentRegistrationId], references: [id], onDelete: Cascade)
+
+  @@map("trust_profiles")
+}
+
+model AiUsageRecord {
+  id                String   @id @default(uuid())
+  workflowId        String?  @map("workflow_id")
+  agentName         String?  @map("agent_name")
+  model             String
+  inputTokens       Int      @map("input_tokens")
+  outputTokens      Int      @map("output_tokens")
+  totalTokens       Int      @map("total_tokens")
+  estimatedCostUsd  Float    @map("estimated_cost_usd")
+  actualCostUsd     Float?   @map("actual_cost_usd")
+  latencyMs         Int      @map("latency_ms")
+  reevaluationCount Int      @default(0) @map("reevaluation_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([agentName])
+  @@map("ai_usage_records")
+}
+
+model TenantAiBudget {
+  id                      String   @id @default(uuid())
+  dailyBudgetUsd          Float    @default(100.0) @map("daily_budget_usd")
+  monthlyBudgetUsd        Float    @default(2000.0) @map("monthly_budget_usd")
+  perTransactionBudgetUsd Float    @default(5.0) @map("per_transaction_budget_usd")
+  perAgentDailyBudgetUsd  Float    @default(20.0) @map("per_agent_daily_budget_usd")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_ai_budgets")
+}
+
+// =============================================================================
+// HRIS Domain Models
+// =============================================================================
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@map("departments")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+model Employee {
+  id           String         @id @default(uuid())
+  departmentId String         @map("department_id")
+  employeeCode String         @unique @map("employee_code")
+  fullName     String         @map("full_name")
+  email        String         @unique
+  position     String
+  status       EmployeeStatus @default(ACTIVE)
+  hireDate     DateTime       @map("hire_date")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  department       Department        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  attendances      Attendance[]
+  leaves           Leave[]
+  overtimeRequests OvertimeRequest[]
+
+  @@index([departmentId])
+  @@map("employees")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  employeeId String           @map("employee_id")
+  date       DateTime
+  checkIn    DateTime?        @map("check_in")
+  checkOut   DateTime?        @map("check_out")
+  status     AttendanceStatus @default(PRESENT)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@map("attendances")
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  MATERNITY
+  PATERNITY
+  UNPAID
+}
+
+enum LeaveStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Leave {
+  id         String      @id @default(uuid())
+  employeeId String      @map("employee_id")
+  type       LeaveType
+  startDate  DateTime    @map("start_date")
+  endDate    DateTime    @map("end_date")
+  reason     String?
+  status     LeaveStatus @default(REQUESTED)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@map("leaves")
+}
+
+enum OvertimeStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+}
+
+model OvertimeRequest {
+  id            String         @id @default(uuid())
+  employeeId    String         @map("employee_id")
+  date          DateTime
+  hours         Float
+  reason        String?
+  estimatedCost Float          @default(0.0) @map("estimated_cost")
+  status        OvertimeStatus @default(REQUESTED)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@map("overtime_requests")
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  ticketId  String   @map("ticket_id")
+  authorId  String   @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_comments")
+}
+
+model TicketAssignment {
+  id         String   @id @default(uuid())
+  ticketId   String   @map("ticket_id")
+  assigneeId String   @map("assignee_id")
+  assignedBy String?  @map("assigned_by")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_assignments")
+}
+
+model TicketSla {
+  id                 String    @id @default(uuid())
+  ticketId           String    @unique @map("ticket_id")
+  responseDueAt      DateTime  @map("response_due_at")
+  resolutionDueAt    DateTime  @map("resolution_due_at")
+  respondedAt        DateTime? @map("responded_at")
+  resolvedAt         DateTime? @map("resolved_at")
+  responseBreached   Boolean   @default(false) @map("response_breached")
+  resolutionBreached Boolean   @default(false) @map("resolution_breached")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_slas")
+}
+
+// =============================================================================
+// Knowledge / RAG Domain Models
+// =============================================================================
+
+enum KnowledgeSourceType {
+  SOP
+  COMPANY_POLICY
+  PRODUCT_CATALOG
+  FINANCIAL_POLICY
+  HR_POLICY
+  PROCUREMENT_POLICY
+  TECHNICAL_DOCUMENTATION
+  HISTORICAL_CASE
+}
+
+model KnowledgeDocument {
+  id         String              @id @default(uuid())
+  title      String
+  content    String
+  sourceType KnowledgeSourceType @map("source_type")
+  tags       String[]
+  metadata   Json?
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@map("knowledge_documents")
+}
+
+// =============================================================================
+// Infrastructure & Scaling Models
+// =============================================================================
+
+enum ScalingAction {
+  SCALE_UP
+  SCALE_DOWN
+}
+
+enum ScalingEventStatus {
+  REQUESTED
+  APPROVED
+  EXECUTED
+  FAILED
+  ESCALATED
+  ROLLED_BACK
+}
+
+model ScalingEvent {
+  id               String             @id @default(uuid())
+  workflowId       String?            @map("workflow_id")
+  clusterName      String             @map("cluster_name")
+  namespace        String
+  deploymentName   String             @map("deployment_name")
+  action           ScalingAction
+  fromReplicas     Int                @map("from_replicas")
+  toReplicas       Int                @map("to_replicas")
+  reason           String
+  projectedCostUsd Float              @map("projected_cost_usd")
+  status           ScalingEventStatus @default(REQUESTED)
+  policyReasons    String[]           @map("policy_reasons")
+  executedAt       DateTime?          @map("executed_at")
+  rolledBackAt     DateTime?          @map("rolled_back_at")
+  ticketId         String?            @map("ticket_id")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("scaling_events")
+}
+
+model CloudCostRecord {
+  id           String   @id @default(uuid())
+  clusterName  String   @map("cluster_name")
+  namespace    String
+  resourceName String   @map("resource_name")
+  costUsd      Float    @map("cost_usd")
+  periodStart  DateTime @map("period_start")
+  periodEnd    DateTime @map("period_end")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("cloud_cost_records")
+}
+
+// =============================================================================
+// Experimentation & Benchmarking Models
+// =============================================================================
+
+enum ExperimentMode {
+  DETERMINISTIC
+  SINGLE_AGENT
+  MULTI_AGENT
+  ORCHESTRATED
+  PROPOSED
+}
+
+enum ExperimentStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model ExperimentScenario {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  scenarioType String   @map("scenario_type")
+  definition   Json
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  runs ExperimentRun[]
+
+  @@map("experiment_scenarios")
+}
+
+model ExperimentRun {
+  id            String           @id @default(uuid())
+  scenarioId    String           @map("scenario_id")
+  mode          ExperimentMode
+  status        ExperimentStatus @default(PENDING)
+  iterations    Int              @default(1)
+  latencyMs     Int?             @map("latency_ms")
+  tokensUsed    Int?             @map("tokens_used")
+  costUsd       Float?           @map("cost_usd")
+  accuracyScore Float?           @map("accuracy_score")
+  result        Json?
+  error         String?
+  executedAt    DateTime?        @map("executed_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  scenario ExperimentScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId])
+  @@map("experiment_runs")
+}

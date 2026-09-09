@@ -1,0 +1,167 @@
+global:
+  environment: production
+  tenantDefaults:
+    isolation: strict
+    region: default
+    aiBudgetUsdDaily: 100
+
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+
+api:
+  replicaCount: 3
+  image:
+    repository: autonomous-enterprise/api
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  port: 3000
+  env:
+    NODE_ENV: production
+    LOG_LEVEL: info
+    METRICS_PATH: /api/v1/metrics
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: 1000m, memory: 1Gi}
+  livenessProbe:
+    httpGet: {path: /api/v1/health, port: http}
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+  readinessProbe:
+    httpGet: {path: /api/v1/health, port: http}
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+  extraEnv: []
+
+web:
+  replicaCount: 2
+  image:
+    repository: autonomous-enterprise/web
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  port: 5173
+  env:
+    NODE_ENV: production
+    PUBLIC_API_BASE_URL: /api
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  livenessProbe:
+    httpGet: {path: /health, port: http}
+    initialDelaySeconds: 20
+    periodSeconds: 15
+  readinessProbe:
+    httpGet: {path: /, port: http}
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  extraEnv: []
+
+postgres:
+  mode: managed
+  host: ""
+  port: 5432
+  database: autonomous_enterprise
+  sslMode: require
+  connectionPool:
+    min: 2
+    max: 20
+    idleTimeoutMs: 30000
+  secretRef:
+    name: ""
+    key: database-url
+
+redis:
+  mode: managed
+  host: ""
+  port: 6379
+  tls: true
+  secretRef:
+    name: ""
+    key: redis-password
+
+kafka:
+  brokers: []
+  securityProtocol: SASL_SSL
+  topics:
+    - name: domain-events
+      partitions: 12
+      replicationFactor: 3
+    - name: agent-tasks
+      partitions: 6
+      replicationFactor: 3
+
+keycloak:
+  issuer: ""
+  jwksUri: ""
+  audience: autonomous-enterprise-api
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://app.example.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+    nginx.ingress.kubernetes.io/cors-allow-headers: Authorization,Content-Type,X-Tenant-ID
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+    - host: app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+  tls:
+    - secretName: autonomous-enterprise-tls
+      hosts: [api.example.com, app.example.com]
+
+secretManagement:
+  mode: externalSecret
+  externalSecret:
+    enabled: false
+    refreshInterval: 1h
+    secretStoreRef: {name: cloud-secrets, kind: ClusterSecretStore}
+    remoteKey: autonomous-enterprise/production
+  sealedSecret:
+    enabled: false
+    encryptedData: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: true
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile: {type: RuntimeDefault}
+  capabilities: {drop: [ALL]}
+  readOnlyRootFilesystem: true
+
+role:
+  create: true
+  allowedDeploymentLabels:
+    app.kubernetes.io/part-of: autonomous-enterprise
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

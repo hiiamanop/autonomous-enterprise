@@ -1,0 +1,49 @@
+\begin{table}[htbp]
+\centering
+\caption{Comparison of five experimental modes.}
+\label{tab:mode-comparison}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Mode & Mean Duration (ms) & Success Rate (%) & Token Consumption & AI Cost ($) & Conflicts & Escalations & Circuit Breakers \\
+\midrule
+Deterministic Baseline & 144.95 & 77.76 & 0 & 0.000000 & 4.62 & 0.00 & 0.00 \\
+Single-Agent & 170.95 & 73.04 & 1346 & 0.004362 & 6.90 & 0.00 & 0.00 \\
+Multi-Agent & 209.57 & 70.54 & 1682 & 0.005453 & 8.57 & 0.00 & 0.00 \\
+Orchestrated & 185.52 & 72.11 & 1458 & 0.004726 & 7.52 & 0.00 & 0.00 \\
+Proposed & 161.52 & 83.79 & 1234 & 0.003999 & 2.86 & 0.57 & 0.43 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Approximate hypothesis significance against the deterministic baseline.}
+\label{tab:hypothesis-significance}
+\begin{tabular}{{lrrr}}
+\toprule
+Comparison & $p$-value & Effect size & 95% CI (percentage points) \\
+\midrule
+Single-Agent vs baseline & 0.7925 & -0.210 & [-18.26, 8.83] \\
+Multi-Agent vs baseline & 0.6315 & -0.296 & [-21.96, 7.53] \\
+Orchestrated vs baseline & 0.7289 & -0.245 & [-19.55, 8.27] \\
+Proposed vs baseline & 0.5694 & 0.328 & [-5.11, 17.17] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Macro enterprise saga performance.}
+\label{tab:macro-saga-performance}
+\begin{tabular}{{lrrr}}
+\toprule
+Mode & Throughput (orders/s) & Saga Step Success (%) & Compensation Rollback Rate (%) \\
+\midrule
+Deterministic Baseline & 8214.91 & 55.65 & 0.00 \\
+Single-Agent & 6997.29 & 47.40 & 0.00 \\
+Multi-Agent & 5729.40 & 40.90 & 0.00 \\
+Orchestrated & 6465.36 & 45.40 & 0.00 \\
+Proposed & 7404.76 & 67.65 & 50.00 \\
+\bottomrule
+\end{tabular}
+\end{table}

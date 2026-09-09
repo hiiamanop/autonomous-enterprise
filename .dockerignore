@@ -1,0 +1,33 @@
+# Dependency trees and build output are recreated inside the image. Copying the
+# host versions would both bloat the context and risk shipping native modules
+# built for the host platform.
+**/node_modules
+**/dist
+**/build
+**/.svelte-kit
+**/.turbo
+**/*.tsbuildinfo
+
+# Local environment and secrets: values are supplied via compose/K8s instead.
+.env
+.env.*
+!.env.example
+
+# VCS, editor and OS noise
+.git
+.gitignore
+.github
+.vscode
+.idea
+**/.DS_Store
+
+# Docs and infrastructure manifests are not needed by the application builds.
+*.md
+infrastructure/helm
+infrastructure/kubernetes
+infrastructure/kind
+infrastructure/cloud
+infrastructure/monitoring
+
+# Test artefacts
+**/coverage

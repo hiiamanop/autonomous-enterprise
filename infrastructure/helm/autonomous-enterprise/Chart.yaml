@@ -1,0 +1,6 @@
+apiVersion: v2
+name: autonomous-enterprise
+version: 1.0.0
+appVersion: "1.0.0"
+description: Production Helm chart for Autonomous Enterprise multi-tenant platform
+type: application

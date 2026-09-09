@@ -1,0 +1,19 @@
+{
+  "uid": "autonomous-enterprise-production",
+  "title": "Autonomous Enterprise Production",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "tags": ["autonomous-enterprise", "production", "multi-tenant"],
+  "panels": [
+    {"id": 1, "type": "stat", "title": "Sales orders/sec", "gridPos": {"x": 0, "y": 0, "w": 8, "h": 5}, "targets": [{"expr": "sum(rate(autonomous_enterprise_sales_orders_total[5m]))", "legendFormat": "orders/s"}]},
+    {"id": 2, "type": "gauge", "title": "Fulfillment rate", "gridPos": {"x": 8, "y": 0, "w": 8, "h": 5}, "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}}, "targets": [{"expr": "sum(rate(autonomous_enterprise_orders_fulfilled_total[15m])) / sum(rate(autonomous_enterprise_sales_orders_total[15m]))"}]},
+    {"id": 3, "type": "timeseries", "title": "Transaction volume", "gridPos": {"x": 16, "y": 0, "w": 8, "h": 5}, "targets": [{"expr": "sum(rate(autonomous_enterprise_transactions_total[5m]))", "legendFormat": "transactions/s"}]},
+    {"id": 4, "type": "timeseries", "title": "Token burn rate", "gridPos": {"x": 0, "y": 5, "w": 8, "h": 7}, "targets": [{"expr": "sum(rate(autonomous_enterprise_ai_tokens_total[5m])) by (tenant_id)", "legendFormat": "{{tenant_id}}"}]},
+    {"id": 5, "type": "stat", "title": "Hourly AI cost USD", "gridPos": {"x": 8, "y": 5, "w": 8, "h": 7}, "targets": [{"expr": "sum(increase(autonomous_enterprise_ai_cost_usd_total[1h]))", "legendFormat": "USD"}]},
+    {"id": 6, "type": "gauge", "title": "Daily budget consumption", "gridPos": {"x": 16, "y": 5, "w": 8, "h": 7}, "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}}, "targets": [{"expr": "sum(increase(autonomous_enterprise_ai_cost_usd_total[24h])) / sum(autonomous_enterprise_ai_daily_budget_usd)"}]},
+    {"id": 7, "type": "timeseries", "title": "Agent Trust Radar", "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8}, "targets": [{"expr": "autonomous_enterprise_agent_accuracy", "legendFormat": "accuracy"}, {"expr": "autonomous_enterprise_agent_calibration", "legendFormat": "calibration"}, {"expr": "rate(autonomous_enterprise_policy_violations_total[5m])", "legendFormat": "policy violations"}, {"expr": "autonomous_enterprise_agent_trust_score", "legendFormat": "overall trust"}]},
+    {"id": 8, "type": "timeseries", "title": "Infrastructure & Scaling", "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8}, "targets": [{"expr": "sum(kube_pod_info{namespace=\"autonomous-enterprise\"})", "legendFormat": "pod count"}, {"expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"autonomous-enterprise\"}[5m]))", "legendFormat": "CPU"}, {"expr": "sum(container_memory_working_set_bytes{namespace=\"autonomous-enterprise\"})", "legendFormat": "memory"}, {"expr": "rate(autonomous_enterprise_autonomous_scaling_events_total[5m])", "legendFormat": "scale events"}, {"expr": "rate(autonomous_enterprise_circuit_breaker_trips_total[5m])", "legendFormat": "circuit breakers"}]}
+  ]
+}

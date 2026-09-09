@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: autonomous-enterprise-alerts
+  namespace: autonomous-enterprise
+  labels: {app.kubernetes.io/part-of: autonomous-enterprise}
+spec:
+  groups:
+    - name: autonomous-enterprise.business
+      rules:
+        - alert: AIBudgetNearLimit
+          expr: autonomous_enterprise_ai_budget_consumption_ratio >= 0.9
+          for: 10m
+          labels: {severity: warning}
+          annotations: {summary: AI daily budget consumption is above 90%}
+        - alert: CircuitBreakerTripRateHigh
+          expr: rate(autonomous_enterprise_circuit_breaker_trips_total[5m]) > 0.1
+          for: 10m
+          labels: {severity: critical}
+          annotations: {summary: Circuit breaker trip rate is high}
+        - alert: SLABreach
+          expr: histogram_quantile(0.95, sum by (le, operation) (rate(autonomous_enterprise_request_duration_seconds_bucket[5m]))) > 2
+          for: 10m
+          labels: {severity: critical}
+          annotations: {summary: API p95 latency SLA breached}
+        - alert: KubernetesScalingFailure
+          expr: kube_deployment_status_replicas_unavailable{namespace="autonomous-enterprise"} > 0 and kube_deployment_spec_replicas{namespace="autonomous-enterprise"} > kube_deployment_status_replicas_available{namespace="autonomous-enterprise"}
+          for: 15m
+          labels: {severity: critical}
+          annotations: {summary: Kubernetes deployment scaling is not converging}

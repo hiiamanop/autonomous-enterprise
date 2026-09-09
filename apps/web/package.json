@@ -1,0 +1,23 @@
+{
+  "name": "@autonomous-enterprise/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "svelte-kit sync && vite build",
+    "lint": "svelte-kit sync && svelte-check",
+    "typecheck": "svelte-kit sync && svelte-check",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^4.0.0",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.16.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte": "^5.16.0",
+    "svelte-check": "^4.1.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}

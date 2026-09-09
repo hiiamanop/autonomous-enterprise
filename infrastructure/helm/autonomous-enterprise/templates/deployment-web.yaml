@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "autonomous-enterprise.fullname" . }}-web
+  labels: {{- include "autonomous-enterprise.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "autonomous-enterprise.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "autonomous-enterprise.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      securityContext:
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          securityContext:
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            allowPrivilegeEscalation: false
+            capabilities: {{- toYaml .Values.securityContext.capabilities | nindent 14 }}
+          ports: [{name: http, containerPort: {{ .Values.web.port }}, protocol: TCP}]
+          envFrom: [{configMapRef: {name: {{ include "autonomous-enterprise.fullname" . }}-web}}]
+          env: {{- with .Values.web.extraEnv }}{{ toYaml . | nindent 12 }}{{- else }}[]{{- end }}
+          resources: {{- toYaml .Values.web.resources | nindent 12 }}
+          livenessProbe: {{- toYaml .Values.web.livenessProbe | nindent 12 }}
+          readinessProbe: {{- toYaml .Values.web.readinessProbe | nindent 12 }}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {sizeLimit: 32Mi}}]

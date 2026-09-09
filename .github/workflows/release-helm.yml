@@ -1,0 +1,28 @@
+name: Release Helm Chart
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+      - name: Lint Helm chart
+        run: helm lint infrastructure/helm/autonomous-enterprise
+      - name: Package Helm chart
+        run: helm package infrastructure/helm/autonomous-enterprise --destination dist
+      - name: Upload Helm package
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-enterprise-helm-chart
+          path: dist/*.tgz
+          if-no-files-found: error

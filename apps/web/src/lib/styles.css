@@ -1,0 +1,151 @@
+:root {
+  /* Light Theme Palette - Clean Contemporary Workspace */
+  --bg-primary: #f8fafc;        /* Slate-50: calm, clean porcelain canvas */
+  --bg-secondary: #f1f5f9;      /* Slate-100: table headers, inner chips, secondary panels */
+  --bg-card: #ffffff;           /* Pure white: floating surfaces & cards */
+  --bg-card-hover: #f8fafc;     /* Card hover highlight */
+  --bg-subtle: #f8fafc;
+
+  --border-color: #e2e8f0;      /* Slate-200: sharp, delicate borders */
+  --border-subtle: #edf2f7;
+  --border-focus: #2563eb;       /* Royal Blue 600 */
+
+  --text-primary: #0f172a;      /* Slate-900: deep ink, maximum legibility */
+  --text-secondary: #475569;    /* Slate-600: balanced reading contrast */
+  --text-muted: #64748b;        /* Slate-500: meta, timestamps, captions */
+  --text-inverse: #ffffff;
+
+  /* Saturated Jewel Accents tuned for Light Mode */
+  --accent-blue: #2563eb;       /* Blue 600 */
+  --accent-blue-subtle: #eff6ff;/* Blue 50 */
+  --accent-blue-border: #bfdbfe;/* Blue 200 */
+
+  --accent-cyan: #0284c7;       /* Sky 600 */
+  --accent-cyan-subtle: #f0f9ff;/* Sky 50 */
+  --accent-cyan-border: #bae6fd;/* Sky 200 */
+
+  --accent-emerald: #059669;    /* Emerald 600 */
+  --accent-emerald-subtle: #ecfdf5; /* Emerald 50 */
+  --accent-emerald-border: #a7f3d0; /* Emerald 200 */
+
+  --accent-amber: #d97706;      /* Amber 600 */
+  --accent-amber-subtle: #fffbeb;   /* Amber 50 */
+  --accent-amber-border: #fde68a;   /* Amber 200 */
+
+  --accent-rose: #e11d48;       /* Rose 600 */
+  --accent-rose-subtle: #fff1f2;    /* Rose 50 */
+  --accent-rose-border: #fecdd3;    /* Rose 200 */
+
+  --accent-purple: #7c3aed;     /* Violet 600 */
+  --accent-purple-subtle: #f5f3ff;  /* Violet 50 */
+  --accent-purple-border: #ddd6fe;  /* Violet 200 */
+
+  /* Subtle Modern Elevations */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Arial Nova", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Light Theme Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  background-clip: content-box;
+}
+
+/* High-Contrast Light Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.badge-active, .badge-success, .badge-low {
+  background: var(--accent-emerald-subtle);
+  color: var(--accent-emerald);
+  border: 1px solid var(--accent-emerald-border);
+}
+
+.badge-degraded, .badge-warning, .badge-medium {
+  background: var(--accent-amber-subtle);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber-border);
+}
+
+.badge-high, .badge-escalated, .badge-maintenance {
+  background: var(--accent-purple-subtle);
+  color: var(--accent-purple);
+  border: 1px solid var(--accent-purple-border);
+}
+
+.badge-critical, .badge-danger, .badge-offline {
+  background: var(--accent-rose-subtle);
+  color: var(--accent-rose);
+  border: 1px solid var(--accent-rose-border);
+}
+
+.badge-info, .badge-blue {
+  background: var(--accent-blue-subtle);
+  color: var(--accent-blue);
+  border: 1px solid var(--accent-blue-border);
+}
+
+/* Text Utility Colors for Light Theme */
+.text-emerald { color: #059669; }
+.text-cyan { color: #0284c7; }
+.text-amber { color: #d97706; }
+.text-rose { color: #e11d48; }
+.text-purple { color: #7c3aed; }
+.text-blue { color: #2563eb; }
+.text-muted { color: var(--text-muted); }

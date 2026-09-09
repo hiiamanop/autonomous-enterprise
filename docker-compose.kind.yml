@@ -1,0 +1,36 @@
+# ------------------------------------------------------------------------------
+# Optional overlay that connects the API container to a local Kind cluster, so
+# the Infrastructure module (and infra-agent) can read real cluster state and
+# perform real scaling instead of falling back to "[NO DATA] cluster snapshot
+# failed".
+#
+# Usage:
+#   kind create cluster --config infrastructure/kind/kind-config.yaml
+#   ./infrastructure/kind/generate-internal-kubeconfig.sh
+#   docker compose -f docker-compose.yml -f docker-compose.kind.yml up -d
+#
+# This is kept as a separate overlay on purpose: the base stack must stay
+# runnable on a machine that has no Kubernetes at all.
+# ------------------------------------------------------------------------------
+
+services:
+  api:
+    environment:
+      KUBECONFIG_PATH: /etc/kube/kubeconfig-internal.yaml
+      # Must match the namespace the sample workload is deployed into
+      # (infrastructure/kubernetes/06-sample-workload.yaml). Pointing at
+      # `default` yields an empty deployment list and the infra-agent then has
+      # nothing to scale.
+      K8S_NAMESPACE: ${K8S_NAMESPACE:-autonomous-enterprise}
+    volumes:
+      - ./infrastructure/kind/kubeconfig-internal.yaml:/etc/kube/kubeconfig-internal.yaml:ro
+    networks:
+      - app-network
+      # Joining Kind's network is what makes the control-plane resolvable by
+      # name. The API server certificate already includes that name in its SANs,
+      # so TLS verification succeeds without any insecure flag.
+      - kind
+
+networks:
+  kind:
+    external: true

@@ -1,0 +1,25 @@
+global:
+  environment: production
+serviceAccount:
+  annotations:
+    iam.gke.io/gcp-service-account: autonomous-enterprise-infra@<project-id>.iam.gserviceaccount.com
+secretManagement:
+  mode: externalSecret
+  externalSecret:
+    enabled: true
+    secretStoreRef: {name: google-secrets-manager, kind: ClusterSecretStore}
+    remoteKey: autonomous-enterprise-production
+ingress:
+  className: gce
+  annotations:
+    kubernetes.io/ingress.class: gce
+    networking.gke.io/managed-certificates: autonomous-enterprise-cert
+    kubernetes.io/ingress.allow-http: "false"
+postgres:
+  mode: managed
+  host: "<cloud-sql-private-ip>"
+redis:
+  mode: managed
+  host: "<memorystore-ip>"
+kafka:
+  brokers: ["<kafka-broker-1>:9093", "<kafka-broker-2>:9093"]

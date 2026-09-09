@@ -1,0 +1,28 @@
+global:
+  environment: production
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/autonomous-enterprise-infra-agent
+secretManagement:
+  mode: externalSecret
+  externalSecret:
+    enabled: true
+    secretStoreRef: {name: aws-secretsmanager, kind: ClusterSecretStore}
+    remoteKey: autonomous-enterprise/production
+ingress:
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:<region>:<account-id>:certificate/<certificate-id>
+postgres:
+  mode: managed
+  host: "<rds-endpoint>"
+redis:
+  mode: managed
+  host: "<elasticache-endpoint>"
+kafka:
+  brokers: ["<msk-broker-1>:9096", "<msk-broker-2>:9096"]
